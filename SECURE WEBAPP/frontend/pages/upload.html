@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload - Secure File Hosting</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">SecureFile</div>
+            <ul class="nav-links">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="downloads.html">Downloads</a></li>
+                <li id="auth-links">
+                    <!-- Auth links will be dynamically inserted here -->
+                </li>
+            </ul>
+        </nav>
+    </header>
+    
+    <main>
+        <div class="container">
+            <div class="form-container">
+                <h2>Upload File</h2>
+                <form id="upload-form" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="file">Select File (PDF only, max 100MB)</label>
+                        <input type="file" id="file" accept=".pdf" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="privacy">Privacy</label>
+                        <select id="privacy" required>
+                            <option value="private">Private</option>
+                            <option value="public">Public</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn">Upload</button>
+                </form>
+                <div id="upload-progress" style="display: none;">
+                    <p>Uploading... <span id="progress-percent">0%</span></p>
+                    <div style="background-color: #f0f0f0; border-radius: 5px; height: 20px;">
+                        <div id="progress-bar" style="width: 0%; height: 100%; background-color: #3498db; border-radius: 5px; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        <p>&copy; 2025 Secure File Hosting. All rights reserved.</p>
+    </footer>
+    
+    <script src="../js/main.js"></script>
+    <script>
+        // Check if user is logged in
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+            checkAuth();
+        });
+        
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('file');
+            const privacy = document.getElementById('privacy').value;
+            
+            if (!fileInput.files[0]) {
+                showAlert('Please select a file', 'error');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            
+            // Validate file type - only PDF files allowed
+            if (file.type !== 'application/pdf' || !file.name.toLowerCase().endsWith('.pdf')) {
+                showAlert('Only PDF files are allowed', 'error');
+                return;
+            }
+            
+            // Validate file size (100MB max)
+            if (file.size > 100 * 1024 * 1024) {
+                showAlert('File too large. Maximum allowed size is 100 MB.', 'error');
+                return;
+            }
+            
+            // Create FormData
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('privacy', privacy);
+            
+            // Show progress
+            document.getElementById('upload-progress').style.display = 'block';
+            
+            try {
+                const token = localStorage.getItem('token');
+                
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.message || 'Upload failed');
+                }
+                
+                // Hide progress
+                document.getElementById('upload-progress').style.display = 'none';
+                
+                showAlert('File uploaded successfully!', 'success');
+                
+                // Reset form
+                document.getElementById('upload-form').reset();
+            } catch (error) {
+                // Hide progress
+                document.getElementById('upload-progress').style.display = 'none';
+                showAlert(error.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html>
